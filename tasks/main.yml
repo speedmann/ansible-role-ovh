@@ -1,0 +1,29 @@
+---
+- name:  get servers
+  ovh:
+    method: get
+    endpoint: soyoustart-eu
+    application_key: "{{ OVH_KEY }}"
+    application_secret: "{{ OVH_SECRET }}"
+    consumer_key: "{{ OVH_TOKEN }}"
+    uri: /dedicated/server/ns302845.ip-94-23-41.eu/virtualMac
+    #args:
+      #ipAddress: 54.37.220.2{{ item }}
+      #type: ovh
+      #virtualMachineName: vm{{ item }}
+  register: mac_addresses
+- name: get ip from mac
+  ovh:
+    method: get
+    endpoint: soyoustart-eu
+    application_key: "{{ OVH_KEY }}"
+    application_secret: "{{ OVH_SECRET }}"
+    consumer_key: "{{ OVH_TOKEN }}"
+    uri: /dedicated/server/ns302845.ip-94-23-41.eu/virtualMac/{{ item }}/virtualAddress
+  register: mac_list
+  with_items:
+    - "{{ mac_addresses.result }}"
+- name: Create container
+  include: create_container.yml
+  with_items:
+    - "{{ groups['mirror'] }}"

@@ -1,0 +1,50 @@
+---
+- name:
+  debug:
+    msg: "{{ mac.item }}"
+  with_items:
+    - "{{ mac_list.results }}"
+  loop_control:
+    loop_var: mac
+- name: set mac address
+  set_fact:
+    mac_address: "{{ mac.item }}"
+  loop_control:
+    loop_var: mac
+  with_items:
+    - "{{ mac_list.results }}"
+  when: hostvars[item].ansible_host == mac.result[0]
+- name: Create container
+  proxmox:
+    node: proxmox
+    api_user: root@pam
+    api_password: "{{ API_PASSWORD  }}"
+    api_host: proxmox.tuxcall.de
+    hostname: "{{ hostvars[item].inventory_hostname }}"
+    ostemplate: 'local:vztmpl/ubuntu-17.04-standard_17.04-1_amd64.tar.gz'
+    netif: '{"net0":"name=eth0,gw=94.23.41.254,ip={{ hostvars[item].ansible_host }}/32,bridge=vmbr0,hwaddr={{ mac_address }}"}'
+    pubkey: "{{ public_key }}"
+    cpus: 2
+    disk: 1500
+    memory: 2048
+  register: create_container
+- name: Wait for container to be created
+  pause:
+    seconds: 5
+  when: create_container|changed
+- name: Start container
+  proxmox:
+    node: proxmox
+    api_user: root@pam
+    api_password: "{{ API_PASSWORD  }}"
+    api_host: proxmox.tuxcall.de
+    hostname: "{{ hostvars[item].inventory_hostname }}"
+    state: started
+- name: Wait 300 seconds for port 22 to become open and contain "OpenSSH"
+  wait_for:
+    port: 22
+    host: "{{ hostvars[item].ansible_host }}"
+    search_regex: OpenSSH
+    delay: 10
+  connection: local
+  when: create_container|changed
