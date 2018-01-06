@@ -25,5 +25,3 @@
     - "{{ mac_addresses.result }}"
 - name: Create container
   include: create_container.yml
-  with_items:
-    - "{{ groups['mirror'] }}"
